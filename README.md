@@ -1,85 +1,140 @@
 # ICD-10 Assistant
 
-Describe a patient's problem in plain English and get back suggested ICD-10 diagnosis codes, each with a short reason. Built with LangChain, FastAPI, and MySQL, and deployed live.
+Describe a patient's problem in plain English and get suggested ICD-10 diagnosis codes, each with a short reason.
 
-**Try it:** https://langchain-icd10-assistant.onrender.com/docs
-*(Free hosting: the first request after a quiet period can take up to a minute to wake up.)*
+**[Live demo](https://langchain-icd10-assistant.onrender.com)** · **[API docs](https://langchain-icd10-assistant.onrender.com/docs)**
+
+> Hosted on a free plan, so the first load after a quiet period can take up to a minute while the server wakes up.
 
 ![Demo](demo.png)
 
-## Why I built it
+## Overview
 
-Medical coding is slow and detail-heavy. I combined my healthcare and coding background with AI to build a tool that speeds up the first step: finding the right code for a written description.
+Medical coding is slow and detail-heavy. This project combines my healthcare and coding background with AI to speed up the first step: finding the right code for a written description.
 
-## What it does
+Type *"burning pain when passing urine"* and it returns the clinical term **Dysuria** and the code **R30.0**, with a one-line reason.
 
-**Input**
+## How it works
 
-```json
-{"description": "patient has chest pain and shortness of breath"}
+1. **Rewrite:** an LLM (via OpenRouter) turns everyday wording into clinical terms.
+2. **Search:** those terms search the ICD-10 table in MySQL (full-text search) for up to 25 candidate codes.
+3. **Pick:** the LLM chooses the best matches and explains each one.
+
+Searching the database first keeps suggestions tied to real codes instead of letting the model invent them.
+
+## Evaluation
+
+Tested on 20 plain-English descriptions with known acceptable codes (`evaluate.py`, results in `results.csv`).
+
+| Measure | Result |
+|---|---|
+| Acceptable code appeared in the suggestions | 16 of 20 (80%) |
+| First suggestion was acceptable | 16 of 20 |
+
+**Known failures:** empty results for "type 2 diabetes with kidney disease" and "fever", and over-specific picks for "pneumonia" and "headache".
+
+This is a small sample of common conditions chosen by me, not a validated benchmark.
+
+## Limitations and safety
+
+- Suggestions are a starting point for a human coder, not a final answer. Not for clinical or billing use without review by a qualified coder.
+- Do not enter real patient information. This is a demo, and requests are sent to a third-party LLM service.
+- Search is keyword-based, so a query like "type 2 diabetes" can return Type 1 codes in the candidate list. The picking step corrects most of this, but not always.
+- Covers ICD-10 diagnosis codes only, not procedure codes.
+
+## Use the API
+
+```bash
+curl -X POST "https://langchain-icd10-assistant.onrender.com/suggest" \
+  -H "Content-Type: application/json" \
+  -d '{"description": "patient has chest pain and shortness of breath"}'
 ```
-
-**Output**
 
 ```json
 {
   "clinical_terms": "Chest pain; dyspnea",
   "suggestions": [
-    {"code": "R07.9", "description": "Chest pain, unspecified", "reason": "..."},
-    {"code": "R06.00", "description": "Dyspnea, unspecified", "reason": "..."}
+    {
+      "code": "R07.9",
+      "description": "Chest pain, unspecified",
+      "reason": "Chest pain, unspecified matches the patient's chest pain without further specification."
+    },
+    {
+      "code": "R06.00",
+      "description": "Dyspnea, unspecified",
+      "reason": "Dyspnea, unspecified matches the patient's shortness of breath."
+    }
   ]
 }
 ```
 
-## How it works
+## Tech stack
 
-1. An LLM rewrites everyday wording into clinical terms.
-2. Those terms search the ICD-10 table in MySQL for up to 25 candidate codes.
-3. The LLM picks the best matches and explains each choice.
-   Searching the database first keeps the suggestions tied to real codes instead of letting the model invent them.
-
-   ## Evaluation
-
-Tested on 20 plain-English descriptions with known acceptable codes (`evaluate.py`, results in `results.csv`). An acceptable code appeared in the suggestions for 16 of 20 cases (80%), and the first suggestion was acceptable in 16 of 20.
-
-Known failures: empty results for "type 2 diabetes with kidney disease" and "fever", and over-specific picks for "pneumonia" and "headache". This is a small sample of common conditions chosen by me, not a validated benchmark.
-
-## Limitations and safety
-
-- Suggestions are a starting point for a human coder, not a final answer. They are not for clinical or billing use without review by a qualified coder.
-- Do not enter real patient information. This is a demo and requests are sent to a third-party LLM service.
-- Search is keyword-based (MySQL full-text), so a query like "type 2 diabetes" can return Type 1 codes in the candidate list. The LLM's picking step corrects most of this, but not always.
-- Covers ICD-10 diagnosis codes only, not procedure codes.
-
+Python · FastAPI · LangChain · OpenRouter · MySQL (Aiven) · HTML · Docker · Render
 
 ## Skills shown
 
-- **AI/LLM engineering:** LangChain pipeline, prompt design, OpenRouter model integration
+- **AI/LLM engineering:** LangChain pipeline, prompt design, OpenRouter integration
+- **Evaluation:** a 20-case test set, measured accuracy, documented failure cases
 - **Backend:** REST API with FastAPI, request validation, MySQL queries
-- **Deployment:** Docker, Render, managed cloud database (Aiven), environment-based configuration
-- **Practice:** Secrets kept out of the repo, debugging from production logs
+- **Frontend:** a single-page interface that calls the API
+- **Deployment:** Docker, Render, managed cloud database, environment-based configuration
+- **Practice:** secrets kept out of the repo, debugging from production logs
 - **Domain knowledge:** ICD-10 coding and clinical terminology
 
-## Tech stack
+## Project structure
 
-Python, FastAPI, LangChain, OpenRouter, MySQL (Aiven), Docker, Render
+| File | Purpose |
+|---|---|
+| `index.html` | Web page served at `/` |
+| `api.py` | FastAPI app, home page, and `/suggest` endpoint |
+| `pipeline.py` | Rewrite, search, and pick steps |
+| `chain.py` | LLM setup and prompts |
+| `db.py` | MySQL connection and code search |
+| `schema.sql` | Database table definitions |
+| `icd10.sql` | ICD-10 data to load into MySQL |
+| `evaluate.py`, `results.csv` | Evaluation script and its results |
+| `Dockerfile` | Container build for deployment |
+| `.env.example` | Environment variable names |
+| `requirements.txt` | Python dependencies |
 
 ## Run it locally
 
 ```bash
 git clone https://github.com/hopemutheu733-cmd/langchain-icd10-assistant.git
 cd langchain-icd10-assistant
-pip install -r requirements.txt
-cp .env.example .env   # add your database and OpenRouter details
-uvicorn api:app --reload
+python -m pip install -r requirements.txt
 ```
 
-Open http://127.0.0.1:8000/docs. The ICD-10 data file is large, so it is not included in the repo.
+Create a MySQL database, run `schema.sql`, then load `icd10.sql`. Copy `.env.example` to a new file named `.env` and fill it in:
 
-## Note
+```env
+MYSQL_HOST=localhost
+MYSQL_USER=your_mysql_user
+MYSQL_PORT=3306
+MYSQL_PASSWORD=your_mysql_password
+MYSQL_DATABASE=your_database_name
+OPENROUTER_API_KEY=your_openrouter_key
+OPENROUTER_MODEL=your_model_name
+```
 
-This is a portfolio project, not a medical device. A qualified coder should verify any code before real use.
+`OPENROUTER_MODEL` is any model ID from [openrouter.ai/models](https://openrouter.ai/models). Models ending in `:free` cost nothing but can be slower or busy.
+
+```bash
+python -m uvicorn api:app --reload
+```
+
+Open http://127.0.0.1:8000 for the web page, or http://127.0.0.1:8000/docs for the API docs.
+
+## Docker and deployment
+
+```bash
+docker build -t icd10-assistant .
+docker run -p 10000:10000 --env-file .env icd10-assistant
+```
+
+To deploy on Render: create a **Web Service** from this repo, set **Language** to Docker, add the seven environment variables above, and deploy.
 
 ## Author
 
-**Hope Mutheu**, [GitHub: hopemutheu733-cmd](https://github.com/hopemutheu733-cmd)
+**Hope Mutheu** · [GitHub](https://github.com/hopemutheu733-cmd)
