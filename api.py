@@ -1,9 +1,17 @@
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from pipeline import suggest_codes
 
 app = FastAPI(title="ICD-10 Assistant")
+
+
+@app.get("/", include_in_schema=False)
+def home():
+    return FileResponse(Path(__file__).parent / "index.html")
 
 
 class DescriptionRequest(BaseModel):

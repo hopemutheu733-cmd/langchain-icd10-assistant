@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ICD-10 Assistant</title>
+<style>
+  :root {
+    --bg: #f6f8fb; --card: #ffffff; --text: #1d2733; --muted: #5b6776;
+    --accent: #1f3a5f; --accent-text: #ffffff; --border: #d9e0ea; --warn-bg: #fff6e0; --warn-border: #f0d9a0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12161c; --card: #1b212a; --text: #e8edf3; --muted: #9aa7b6;
+      --accent: #6aa6ff; --accent-text: #0c1117; --border: #2c3542; --warn-bg: #2a2412; --warn-border: #5a4a1a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.5; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { margin: 0 0 4px; font-size: 1.6rem; }
+  .sub { margin: 0 0 20px; color: var(--muted); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  textarea { width: 100%; min-height: 96px; padding: 10px; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; resize: vertical; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+  button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); padding: 6px 12px; }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; padding: 8px 18px; }
+  button:disabled { opacity: 0.6; cursor: wait; }
+  .chips button { font-size: 0.85rem; }
+  .warn { background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 8px; padding: 10px 12px; font-size: 0.9rem; }
+  .status { color: var(--muted); font-size: 0.95rem; margin: 8px 0; min-height: 1.4em; }
+  .error { color: #c0392b; }
+  .terms { margin: 0 0 12px; color: var(--muted); }
+  .result { border-top: 1px solid var(--border); padding: 12px 0; }
+  .result:first-of-type { border-top: 0; }
+  .code { display: inline-block; font-family: ui-monospace, Consolas, monospace; font-weight: 700; background: var(--accent); color: var(--accent-text); border-radius: 6px; padding: 2px 8px; margin-right: 8px; }
+  .desc { font-weight: 600; }
+  .reason { margin: 6px 0 0; color: var(--muted); }
+  footer { color: var(--muted); font-size: 0.85rem; margin-top: 24px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>ICD-10 Assistant</h1>
+  <p class="sub">Describe a patient's problem in plain English and get suggested ICD-10 diagnosis codes, each with a short reason.</p>
+
+  <div class="warn" role="note">Demo only. Do not enter real patient information. Suggestions are a starting point for a human coder, not for clinical or billing use.</div>
+
+  <div class="card" style="margin-top:16px">
+    <label for="desc"><strong>Describe the problem</strong></label>
+    <textarea id="desc" maxlength="500" placeholder="e.g. patient has chest pain and shortness of breath"></textarea>
+    <div class="row chips" id="chips" aria-label="Examples">
+      <span style="color:var(--muted);font-size:0.85rem">Try:</span>
+    </div>
+    <div class="row">
+      <button class="primary" id="go">Suggest codes</button>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </div>
+
+  <div class="card" id="out" hidden></div>
+
+  <footer>
+    Built with LangChain, FastAPI and MySQL. <a href="/docs">API docs</a> ·
+    <a href="https://github.com/hopemutheu733-cmd/langchain-icd10-assistant">Source on GitHub</a>
+  </footer>
+</main>
+
+<script>
+  const examples = [
+    "patient has chest pain and shortness of breath",
+    "type 2 diabetes with kidney disease",
+    "burning pain when passing urine",
+    "high blood pressure"
+  ];
+  const $ = (id) => document.getElementById(id);
+  const desc = $("desc"), go = $("go"), statusEl = $("status"), out = $("out");
+
+  examples.forEach((text) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = text;
+    b.addEventListener("click", () => { desc.value = text; desc.focus(); });
+    $("chips").appendChild(b);
+  });
+
+  function setStatus(msg, isError) {
+    statusEl.textContent = msg;
+    statusEl.className = "status" + (isError ? " error" : "");
+  }
+
+  async function run() {
+    const text = desc.value.trim();
+    if (!text) { setStatus("Please type a description first.", true); return; }
+    go.disabled = true;
+    out.hidden = true;
+    setStatus("Working on it. If the server was asleep, the first request can take up to a minute...");
+    try {
+      const res = await fetch("/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: text })
+      });
+      if (!res.ok) throw new Error("The server returned an error (" + res.status + ").");
+      const data = await res.json();
+      render(data);
+      setStatus("");
+    } catch (err) {
+      setStatus("Something went wrong: " + err.message + " Please try again.", true);
+    } finally {
+      go.disabled = false;
+    }
+  }
+
+  function render(data) {
+    out.textContent = "";
+    if (data.clinical_terms) {
+      const p = document.createElement("p");
+      p.className = "terms";
+      p.textContent = "Clinical terms: " + data.clinical_terms;
+      out.appendChild(p);
+    }
+    const list = data.suggestions || [];
+    if (!list.length) {
+      const p = document.createElement("p");
+      p.textContent = "No matching codes were found. Try rewording the description.";
+      out.appendChild(p);
+    }
+    list.forEach((s) => {
+      const box = document.createElement("div");
+      box.className = "result";
+      const code = document.createElement("span");
+      code.className = "code";
+      code.textContent = s.code;
+      const d = document.createElement("span");
+      d.className = "desc";
+      d.textContent = s.description;
+      const r = document.createElement("p");
+      r.className = "reason";
+      r.textContent = s.reason || "";
+      box.append(code, d, r);
+      out.appendChild(box);
+    });
+    out.hidden = false;
+  }
+
+  go.addEventListener("click", run);
+  desc.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) run(); });
+</script>
+</body>
+</html>
