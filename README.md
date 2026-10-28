@@ -36,8 +36,14 @@ Medical coding is slow and detail-heavy. I combined my healthcare and coding bac
 1. An LLM rewrites everyday wording into clinical terms.
 2. Those terms search the ICD-10 table in MySQL for up to 25 candidate codes.
 3. The LLM picks the best matches and explains each choice.
+   Searching the database first keeps the suggestions tied to real codes instead of letting the model invent them.
+## Limitations and safety
 
-Searching the database first keeps the suggestions tied to real codes instead of letting the model invent them.
+- Suggestions are a starting point for a human coder, not a final answer. They are not for clinical or billing use without review by a qualified coder.
+- Do not enter real patient information. This is a demo and requests are sent to a third-party LLM service.
+- Search is keyword-based (MySQL full-text), so a query like "type 2 diabetes" can return Type 1 codes in the candidate list. The LLM's picking step corrects most of this, but not always.
+- Covers ICD-10 diagnosis codes only, not procedure codes.
+
 
 ## Skills shown
 
