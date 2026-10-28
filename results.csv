@@ -1,0 +1,21 @@
+#,description,acceptable_codes,suggested_codes,hit,first_is_hit
+1,patient has high blood pressure,I10,I10,True,True
+2,type 2 diabetes with no complications,E11.9,E11.9,True,True
+3,type 2 diabetes with kidney disease,E11.21/E11.22/E11.29,,False,False
+4,migraine without aura,G43.009,G43.009,True,True
+5,acute bronchitis,J20.9,J20.9,True,True
+6,burning pain when passing urine and frequent urination,N39.0/R30.0,R30.0/R35.0,True,True
+7,low back pain,M54.50/M54.59,M54.50,True,True
+8,asthma,J45.909,J45.909,True,True
+9,anaemia caused by iron deficiency,D50.9,D50.9,True,True
+10,pneumonia,J18.9,J12.0/J12.1/J12.2,False,False
+11,patient has a fever,R50.9,,False,False
+12,headache,R51.9,G44.1,False,False
+13,patient keeps vomiting,R11.10/R11.2,R11.10,True,True
+14,acute appendicitis,K35.80/K35.89,K35.80,True,True
+15,patient is depressed,F32.A/F32.9,F32.9,True,True
+16,stomach acid coming back up into the throat (reflux),K21.9,K21.9,True,True
+17,underactive thyroid,E03.9,E03.9,True,True
+18,malaria,B54/B50.9,B54,True,True
+19,tuberculosis of the lung,A15.0,A15.0,True,True
+20,watery diarrhoea,R19.7/A09,R19.7,True,True
