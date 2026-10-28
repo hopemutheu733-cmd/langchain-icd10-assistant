@@ -37,6 +37,13 @@ Medical coding is slow and detail-heavy. I combined my healthcare and coding bac
 2. Those terms search the ICD-10 table in MySQL for up to 25 candidate codes.
 3. The LLM picks the best matches and explains each choice.
    Searching the database first keeps the suggestions tied to real codes instead of letting the model invent them.
+
+   ## Evaluation
+
+Tested on 20 plain-English descriptions with known acceptable codes (`evaluate.py`, results in `results.csv`). An acceptable code appeared in the suggestions for 16 of 20 cases (80%), and the first suggestion was acceptable in 16 of 20.
+
+Known failures: empty results for "type 2 diabetes with kidney disease" and "fever", and over-specific picks for "pneumonia" and "headache". This is a small sample of common conditions chosen by me, not a validated benchmark.
+
 ## Limitations and safety
 
 - Suggestions are a starting point for a human coder, not a final answer. They are not for clinical or billing use without review by a qualified coder.
