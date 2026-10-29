@@ -54,7 +54,11 @@ This is a small sample of common conditions chosen by me, not a validated benchm
 curl -X POST "https://langchain-icd10-assistant.onrender.com/suggest" \
   -H "Content-Type: application/json" \
   -d '{"description": "patient has chest pain and shortness of breath"}'
+```
+
 Example response:
+
+```json
 {
   "clinical_terms": "Chest pain; dyspnea",
   "suggestions": [
@@ -70,25 +74,32 @@ Example response:
     }
   ]
 }
-Limitations and safety
-Suggestions are a starting point for a human coder, not a final answer. Not for clinical or billing use without review by a qualified coder.
-Do not enter real patient information. This is a demo, and requests are sent to a third-party LLM service.
-Search is keyword-based, so a query like "type 2 diabetes" can return Type 1 codes in the candidate list. The picking step corrects most of this, but not always.
-Covers ICD-10 diagnosis codes only, not procedure codes.
+```
 
-Tech stack
+## Limitations and safety
+
+- Suggestions are a starting point for a human coder, not a final answer. Not for clinical or billing use without review by a qualified coder.
+- Do not enter real patient information. This is a demo, and requests are sent to a third-party LLM service.
+- Search is keyword-based, so a query like "type 2 diabetes" can return Type 1 codes in the candidate list. The picking step corrects most of this, but not always.
+- Covers ICD-10 diagnosis codes only, not procedure codes.
+
+## Tech stack
+
 Python · FastAPI · LangChain · OpenRouter · MySQL (Aiven) · HTML · Docker · Render
 
-Skills shown
-AI/LLM engineering: LangChain pipeline, prompt design, OpenRouter integration
-Evaluation: a 20-case test set, measured accuracy, documented failure cases
-Backend: REST API with FastAPI, request validation, MySQL queries
-Frontend: a single-page interface that calls the API
-Deployment: Docker, Render, managed cloud database, environment-based configuration
-Practice: secrets kept out of the repo, debugging from production logs
-Domain knowledge: ICD-10 coding and clinical terminology
+## Skills shown
 
-Project structure
+- **AI/LLM engineering:** LangChain pipeline, prompt design, OpenRouter integration
+- **Evaluation:** a 20-case test set, measured accuracy, documented failure cases
+- **Backend:** REST API with FastAPI, request validation, MySQL queries
+- **Frontend:** a single-page interface that calls the API
+- **Deployment:** Docker, Render, managed cloud database, environment-based configuration
+- **Practice:** secrets kept out of the repo, debugging from production logs
+- **Domain knowledge:** ICD-10 coding and clinical terminology
+
+## Project structure
+
+```
 .
 ├── index.html            # Web page served at /
 ├── api.py                # FastAPI app, home page, and /suggest endpoint
@@ -105,13 +116,19 @@ Project structure
 ├── README.md             # Project overview
 ├── demo.png              # Demo image
 └── .gitignore
-Run it locally
+```
 
+## Run it locally
+
+```bash
 git clone https://github.com/hopemutheu733-cmd/langchain-icd10-assistant.git
 cd langchain-icd10-assistant
 python -m pip install -r requirements.txt
+```
 
-Create a MySQL database, run schema.sql, then load icd10.sql. Copy .env.example to a new file named .env and fill it in:
+Create a MySQL database, run `schema.sql`, then load `icd10.sql`. Copy `.env.example` to a new file named `.env` and fill it in:
+
+```env
 MYSQL_HOST=localhost
 MYSQL_USER=your_mysql_user
 MYSQL_PORT=3306
@@ -119,36 +136,35 @@ MYSQL_PASSWORD=your_mysql_password
 MYSQL_DATABASE=your_database_name
 OPENROUTER_API_KEY=your_openrouter_key
 OPENROUTER_MODEL=your_model_name
+```
 
-OPENROUTER_MODEL is any model ID from openrouter.ai/models. Models ending in :free cost nothing but can be slower or busy.
+`OPENROUTER_MODEL` is any model ID from [openrouter.ai/models](https://openrouter.ai/models). Models ending in `:free` cost nothing but can be slower or busy.
 
-bash
+Start the server:
+
+```bash
 python -m uvicorn api:app --reload
-Open:
+```
 
-http://127.0.0.1:8000
-http://127.0.0.1:8000/docs
+Then open:
 
+- http://127.0.0.1:8000
+- http://127.0.0.1:8000/docs
 
-Docker and deployment
-bash
+## Docker and deployment
+
+```bash
 docker build -t icd10-assistant .
 docker run -p 10000:10000 --env-file .env icd10-assistant
+```
+
 To deploy on Render:
 
-Create a Web Service from this repo
-Set Language to Docker
-Add the environment variables above
-Deploy
-Author
-Hope Mutheu · GitHub
+1. Create a Web Service from this repo
+2. Set Language to Docker
+3. Add the environment variables above
+4. Deploy
 
-Code
+## Author
 
-If you want, I can also give you:
-- a super short GitHub README version
-- a cleaner “recruiter-ready” version
-- or a version with fewer sections and more visuals
-
-If you paste this exact text into your repo README, it should render correctly.
-
+**Hope Mutheu** · [GitHub](https://github.com/hopemutheu733-cmd)
